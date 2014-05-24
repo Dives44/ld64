@@ -2319,7 +2319,7 @@ void Linker::collectStabs(ObjectFile::Reader* reader, std::map<const class Objec
 	if ( readerStabs == NULL )
 		return;
 
-	if ( log ) fprintf(stderr, "processesing %lu stabs for %s\n", readerStabs->size(), reader->getPath());
+	if ( log ) fprintf(stderr, "processesing %lu stabs for %s\n", (unsigned long)readerStabs->size(), reader->getPath());
 	std::vector<HeaderRange> ranges;
 	int curRangeIndex = -1;
 	int count = 0;
