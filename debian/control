@@ -1,0 +1,20 @@
+Source: ld64
+Section: devel
+Priority: extra
+Maintainer: Fabian Renn <fabian.renn@gmail.com>
+Build-Depends: debhelper (>= 8.0.0), libssl-dev, libssl1.0.0
+Standards-Version: 3.9.4
+Homepage: http://github.com/hogliux/ld64
+Vcs-Git: https://github.com/hogliux/ld64.git
+Vcs-Browser: http://github.com/hogliux/ld64
+
+Package: ld64
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Apple Mac OS X linker ported to linux
+ This is the Mac OS X linker ld64 ported to linux. This is useful if you
+ want to cross-compile binaries targeted for Mac OS X on a linux
+ machine. You will also need the Apple Mac OS X SDK files and
+ a compatibale compiler (see the crossosx-gcc package) and the assembler
+ (see the cctools package) to be able to generate any Mac
+ OS X programs.
