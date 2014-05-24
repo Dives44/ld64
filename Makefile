@@ -1,6 +1,6 @@
 CC=gcc
 CXX=g++
-CFLAGS=-Werror -Wall -Iinclude -Isrc -D_LARGEFILE64_SOURCE -DEMULATED_HOST_CPU_TYPE=CPU_TYPE_I386 -DEMULATED_HOST_CPU_SUBTYPE='CPU_SUBTYPE_INTEL(12, 1)' -Wno-unused-but-set-variable -Wno-unused-function -Wno-unused-variable
+CFLAGS=-Wall -Iinclude -Isrc -D_LARGEFILE64_SOURCE -DEMULATED_HOST_CPU_TYPE=CPU_TYPE_I386 -DEMULATED_HOST_CPU_SUBTYPE='CPU_SUBTYPE_INTEL(12, 1)' -Wno-unused-but-set-variable -Wno-unused-function -Wno-unused-variable
 CXXFLAGS=
 LDFLAGS=
 LIBS=-lcrypto
