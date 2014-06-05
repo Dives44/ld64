@@ -1,7 +1,9 @@
 ld64
 ========
 
-*This is the Apple toolchain linker ported to linux forming a portion of a cross toolchain able to produce Mac OS X binaries on linux.
+**ld64 is still highly *experimental* and will produce *invalid* binaries when run on 64-bit linux systems.**
+
+This is the Apple toolchain linker ported to linux forming a portion of a cross toolchain able to produce Mac OS X binaries on linux.
 
 See my cctools (as,nm,lipo,otool,etc.), bomutils (installer creator) and (osxcrossgcc) github projects for more cross-compiling tools.
 
