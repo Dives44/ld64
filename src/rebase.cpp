@@ -30,7 +30,6 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <unistd.h>
@@ -764,7 +763,7 @@ static void rebase(const fileInfo& info)
 				if ( (*rit)->getArchitecture() == fait->arch ) {
 					(*rit)->setBaseAddress(fait->newBase);
 					if ( verbose )
-						printf("%8s 0x%0llX -> 0x%0llX  %s\n", nameForArch(fait->arch), (unsigned long long)fait->orgBase, (unsigned long long)fait->newBase, info.path);
+						printf("%8s 0x%0llX -> 0x%0llX  %s\n", nameForArch(fait->arch), fait->orgBase, fait->newBase, info.path);
 				}
 			}	
 		}

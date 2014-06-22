@@ -35,7 +35,7 @@
 #include <vector>
 #include <set>
 #include <algorithm>
-#include <tr1/unordered_map>
+#include <ext/hash_map>
 
 #include "MachOFileAbstraction.hpp"
 #include "ObjectFile.h"
@@ -102,7 +102,7 @@ private:
 	public:
 		bool operator()(const char* left, const char* right) const { return (strcmp(left, right) == 0); }
 	};
-	typedef std::tr1::unordered_map<const char*, const struct ranlib*, std::tr1::hash<const char*>, CStringEquals> NameToEntryMap;
+	typedef __gnu_cxx::hash_map<const char*, const struct ranlib*, __gnu_cxx::hash<const char*>, CStringEquals> NameToEntryMap;
 
 	typedef typename A::P							P;
 	typedef typename A::P::E						E;

@@ -30,11 +30,12 @@
 #include <unistd.h>
 #include <sys/param.h>
 
+
 #include <vector>
 #include <set>
 #include <algorithm>
-#include <tr1/unordered_set>
-#include <tr1/unordered_map>
+#include <ext/hash_map>
+#include <ext/hash_set>
 
 #include "MachOFileAbstraction.hpp"
 #include "ObjectFile.h"
@@ -266,8 +267,8 @@ private:
 		bool operator()(const char* left, const char* right) const { return (strcmp(left, right) == 0); }
 	};
 	struct AtomAndWeak { ObjectFile::Atom* atom; bool weak; uint32_t ordinal; };
-	typedef std::tr1::unordered_map<const char*, AtomAndWeak, std::tr1::hash<const char*>, CStringEquals> NameToAtomMap;
-	typedef std::tr1::unordered_set<const char*, std::tr1::hash<const char*>, CStringEquals>  NameSet;
+	typedef __gnu_cxx::hash_map<const char*, AtomAndWeak, __gnu_cxx::hash<const char*>, CStringEquals> NameToAtomMap;
+	typedef __gnu_cxx::hash_set<const char*, __gnu_cxx::hash<const char*>, CStringEquals>  NameSet;
 	typedef typename NameToAtomMap::iterator		NameToAtomMapIterator;
 
 	struct PathAndFlag { const char* path; bool reExport; };
@@ -512,7 +513,7 @@ Reader<A>::Reader(const uint8_t* fileContent, uint64_t fileLength, const char* p
 		if ( fgLogHashtable ) fprintf(stderr, "ld: building hashtable of %u toc entries for %s\n", dynamicInfo->nextdefsym(), path);
 		const macho_nlist<P>* start = &symbolTable[dynamicInfo->iextdefsym()];
 		const macho_nlist<P>* end = &start[dynamicInfo->nextdefsym()];
-		fAtoms.rehash(dynamicInfo->nextdefsym()); // set initial bucket count
+		fAtoms.resize(dynamicInfo->nextdefsym()); // set initial bucket count
 		uint32_t index = ordinalBase;
 		for (const macho_nlist<P>* sym=start; sym < end; ++sym, ++index) {
 			this->addSymbol(&strings[sym->n_strx()], (sym->n_desc() & N_WEAK_DEF) != 0, index);
@@ -521,7 +522,7 @@ Reader<A>::Reader(const uint8_t* fileContent, uint64_t fileLength, const char* p
 	}
 	else {
 		int32_t count = dynamicInfo->ntoc();
-		fAtoms.rehash(count); // set initial bucket count
+		fAtoms.resize(count); // set initial bucket count
 		if ( fgLogHashtable ) fprintf(stderr, "ld: building hashtable of %u entries for %s\n", count, path);
 		const struct dylib_table_of_contents* toc = (dylib_table_of_contents*)((char*)header + dynamicInfo->tocoff());
 		for (int32_t i = 0; i < count; ++i) {
