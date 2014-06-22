@@ -44,8 +44,7 @@
 #include <vector>
 #include <list>
 #include <algorithm>
-#include <tr1/unordered_set>
-#include <tr1/unordered_map>
+#include <ext/hash_map>
 #include <dlfcn.h>
 
 #include "Options.h"
@@ -92,8 +91,8 @@ private:
 		bool operator()(Section* left, Section* right);
 	};
 
-	typedef std::tr1::unordered_map<const char*, uint32_t, std::tr1::hash<const char*>, CStringEquals> NameToOrdinal;
-	typedef std::tr1::unordered_map<const char*, class Section*, std::tr1::hash<const char*>, CStringEquals> NameToSection;
+	typedef __gnu_cxx::hash_map<const char*, uint32_t, __gnu_cxx::hash<const char*>, CStringEquals> NameToOrdinal;
+	typedef __gnu_cxx::hash_map<const char*, class Section*, __gnu_cxx::hash<const char*>, CStringEquals> NameToSection;
 	//typedef std::map<const char*, class Section*, CStringComparor> NameToSection;
 
 	const char*		fSectionName;
@@ -292,7 +291,7 @@ private:
 	class SymbolTable
 	{
 	public:
-		typedef std::tr1::unordered_map<const char*, ObjectFile::Atom*, std::tr1::hash<const char*>, CStringEquals> Mapper;
+		typedef __gnu_cxx::hash_map<const char*, ObjectFile::Atom*, __gnu_cxx::hash<const char*>, CStringEquals> Mapper;
 
 							SymbolTable(Linker&);
 		void				require(const char* name);
@@ -331,9 +330,9 @@ private:
 		uint32_t						offset;
 		const char*						probeName;
 	};
-	typedef std::tr1::unordered_map<const char*, std::vector<DTraceProbeInfo>, std::tr1::hash<const char*>, CStringEquals>	ProviderToProbes;
-	typedef	std::tr1::unordered_set<const char*, std::tr1::hash<const char*>, CStringEquals>  CStringSet;
-	typedef std::tr1::unordered_map<const char*, ObjectFile::Reader*, std::tr1::hash<const char*>, CStringEquals>	InstallNameToReader;
+	typedef __gnu_cxx::hash_map<const char*, std::vector<DTraceProbeInfo>, __gnu_cxx::hash<const char*>, CStringEquals>	ProviderToProbes;
+	typedef	__gnu_cxx::hash_set<const char*, __gnu_cxx::hash<const char*>, CStringEquals>  CStringSet;
+	typedef __gnu_cxx::hash_map<const char*, ObjectFile::Reader*, __gnu_cxx::hash<const char*>, CStringEquals>	InstallNameToReader;
 
 	struct IndirectLibrary {
 		const char*							path;
@@ -663,7 +662,7 @@ char* Linker::commatize(uint64_t in, char* out)
 {
 	char* result = out;
 	char rawNum[30];
-	sprintf(rawNum, "%llu", (unsigned long long)in);
+	sprintf(rawNum, "%llu", in);
 	const int rawNumLen = strlen(rawNum);
 	for(int i=0; i < rawNumLen-1; ++i) {
 		*out++ = rawNum[i];
@@ -2080,7 +2079,7 @@ void Linker::tweakLayout()
 		fBiggerThanTwoGigOutput = true;
 
 		if ( (fTotalSize-fTotalZeroFillSize) > 0x7F000000 )
-			throwf("total output size exceeds 2GB (%lldMB)", (unsigned long long)(fTotalSize-fTotalZeroFillSize)/(1024*1024));		
+			throwf("total output size exceeds 2GB (%lldMB)", (fTotalSize-fTotalZeroFillSize)/(1024*1024));		
 
 		// move very large (>1MB) zero fill atoms to a new section at very end of __DATA segment
 		Section* hugeZeroFills = Section::find("__huge", "__DATA", true);
@@ -2305,7 +2304,7 @@ struct HeaderRange {
 };
 
 
-typedef std::tr1::unordered_map<const char*, std::vector<uint32_t>, std::tr1::hash<const char*>, CStringEquals> PathToSums;
+typedef __gnu_cxx::hash_map<const char*, std::vector<uint32_t>, __gnu_cxx::hash<const char*>, CStringEquals> PathToSums;
 
 // hash table that maps header path to a vector of known checksums for that path
 static PathToSums sKnownBINCLs;
@@ -2319,7 +2318,7 @@ void Linker::collectStabs(ObjectFile::Reader* reader, std::map<const class Objec
 	if ( readerStabs == NULL )
 		return;
 
-	if ( log ) fprintf(stderr, "processesing %lu stabs for %s\n", (unsigned long)readerStabs->size(), reader->getPath());
+	if ( log ) fprintf(stderr, "processesing %lu stabs for %s\n", readerStabs->size(), reader->getPath());
 	std::vector<HeaderRange> ranges;
 	int curRangeIndex = -1;
 	int count = 0;
@@ -2597,7 +2596,7 @@ void Linker::synthesizeDebugNotes(std::vector<class ObjectFile::Atom*>& allAtoms
 	const char* filename = NULL;
 	bool wroteStartSO = false;
 	bool useZeroOSOModTime = (getenv("RC_RELEASE") != NULL);
-	std::tr1::unordered_set<const char*, std::tr1::hash<const char*>, CStringEquals>  seenFiles;
+	__gnu_cxx::hash_set<const char*, __gnu_cxx::hash<const char*>, CStringEquals>  seenFiles;
 	for (std::vector<ObjectFile::Atom*>::iterator it=allAtomsByReader.begin(); it != allAtomsByReader.end(); it++) {
 		ObjectFile::Atom* atom = *it;
 		const char* newDirPath;
@@ -2943,42 +2942,42 @@ ObjectFile::Reader* Linker::createReader(const Options::FileInfo& info)
 	switch (fArchitecture) {
 		case CPU_TYPE_POWERPC:
 			if ( mach_o::relocatable::Reader<ppc>::validFile(p) )
-				return this->addObject(new typename mach_o::relocatable::Reader<ppc>::Reader(p, info.path, info.modTime, fOptions.readerOptions(), fNextInputOrdinal), info, len);
+				return this->addObject(new mach_o::relocatable::Reader<ppc>(p, info.path, info.modTime, fOptions.readerOptions(), fNextInputOrdinal), info, len);
 			else if ( mach_o::dylib::Reader<ppc>::validFile(p, info.options.fBundleLoader) )
-				return this->addDylib(new typename mach_o::dylib::Reader<ppc>::Reader(p, len, info.path, info.options, fOptions.readerOptions(), fNextInputOrdinal), info, len);
+				return this->addDylib(new mach_o::dylib::Reader<ppc>(p, len, info.path, info.options, fOptions.readerOptions(), fNextInputOrdinal), info, len);
 			else if ( archive::Reader<ppc>::validFile(p, len) )
-				return this->addArchive(new typename archive::Reader<ppc>::Reader(p, len, info.path, info.modTime, fOptions.readerOptions(), fNextInputOrdinal), info, len);
+				return this->addArchive(new archive::Reader<ppc>(p, len, info.path, info.modTime, fOptions.readerOptions(), fNextInputOrdinal), info, len);
 			break;
 		case CPU_TYPE_POWERPC64:
 			if ( mach_o::relocatable::Reader<ppc64>::validFile(p) )
-				return this->addObject(new typename mach_o::relocatable::Reader<ppc64>::Reader(p, info.path, info.modTime, fOptions.readerOptions(), fNextInputOrdinal), info, len);
+				return this->addObject(new mach_o::relocatable::Reader<ppc64>(p, info.path, info.modTime, fOptions.readerOptions(), fNextInputOrdinal), info, len);
 			else if ( mach_o::dylib::Reader<ppc64>::validFile(p, info.options.fBundleLoader) )
-				return this->addDylib(new typename mach_o::dylib::Reader<ppc64>::Reader(p, len, info.path, info.options, fOptions.readerOptions(), fNextInputOrdinal), info, len);
+				return this->addDylib(new mach_o::dylib::Reader<ppc64>(p, len, info.path, info.options, fOptions.readerOptions(), fNextInputOrdinal), info, len);
 			else if ( archive::Reader<ppc64>::validFile(p, len) )
-				return this->addArchive(new typename archive::Reader<ppc64>::Reader(p, len, info.path, info.modTime, fOptions.readerOptions(), fNextInputOrdinal), info, len);
+				return this->addArchive(new archive::Reader<ppc64>(p, len, info.path, info.modTime, fOptions.readerOptions(), fNextInputOrdinal), info, len);
 			break;
 		case CPU_TYPE_I386:
 			if ( mach_o::relocatable::Reader<x86>::validFile(p) )
-				return this->addObject(new typename mach_o::relocatable::Reader<x86>::Reader(p, info.path, info.modTime, fOptions.readerOptions(), fNextInputOrdinal), info, len);
+				return this->addObject(new mach_o::relocatable::Reader<x86>(p, info.path, info.modTime, fOptions.readerOptions(), fNextInputOrdinal), info, len);
 			else if ( mach_o::dylib::Reader<x86>::validFile(p, info.options.fBundleLoader) )
-				return this->addDylib(new typename mach_o::dylib::Reader<x86>::Reader(p, len, info.path, info.options, fOptions.readerOptions(), fNextInputOrdinal), info, len);
+				return this->addDylib(new mach_o::dylib::Reader<x86>(p, len, info.path, info.options, fOptions.readerOptions(), fNextInputOrdinal), info, len);
 			else if ( archive::Reader<x86>::validFile(p, len) )
-				return this->addArchive(new typename archive::Reader<x86>::Reader(p, len, info.path, info.modTime, fOptions.readerOptions(), fNextInputOrdinal), info, len);
+				return this->addArchive(new archive::Reader<x86>(p, len, info.path, info.modTime, fOptions.readerOptions(), fNextInputOrdinal), info, len);
 			break;
 		case CPU_TYPE_X86_64:
 			if ( mach_o::relocatable::Reader<x86_64>::validFile(p) )
-				return this->addObject(new typename mach_o::relocatable::Reader<x86_64>::Reader(p, info.path, info.modTime, fOptions.readerOptions(), fNextInputOrdinal), info, len);
+				return this->addObject(new mach_o::relocatable::Reader<x86_64>(p, info.path, info.modTime, fOptions.readerOptions(), fNextInputOrdinal), info, len);
 			else if ( mach_o::dylib::Reader<x86_64>::validFile(p, info.options.fBundleLoader) )
-				return this->addDylib(new typename mach_o::dylib::Reader<x86_64>::Reader(p, len, info.path, info.options, fOptions.readerOptions(), fNextInputOrdinal), info, len);
+				return this->addDylib(new mach_o::dylib::Reader<x86_64>(p, len, info.path, info.options, fOptions.readerOptions(), fNextInputOrdinal), info, len);
 			else if ( archive::Reader<x86_64>::validFile(p, len) )
-				return this->addArchive(new typename archive::Reader<x86_64>::Reader(p, len, info.path, info.modTime, fOptions.readerOptions(), fNextInputOrdinal), info, len);
+				return this->addArchive(new archive::Reader<x86_64>(p, len, info.path, info.modTime, fOptions.readerOptions(), fNextInputOrdinal), info, len);
 		case CPU_TYPE_ARM:
 			if ( mach_o::relocatable::Reader<arm>::validFile(p) )
-				return this->addObject(new typename mach_o::relocatable::Reader<arm>::Reader(p, info.path, info.modTime, fOptions.readerOptions(), fNextInputOrdinal), info, len);
+				return this->addObject(new mach_o::relocatable::Reader<arm>(p, info.path, info.modTime, fOptions.readerOptions(), fNextInputOrdinal), info, len);
 			else if ( mach_o::dylib::Reader<arm>::validFile(p, info.options.fBundleLoader) )
-				return this->addDylib(new typename mach_o::dylib::Reader<arm>::Reader(p, len, info.path, info.options, fOptions.readerOptions(), fNextInputOrdinal), info, len);
+				return this->addDylib(new mach_o::dylib::Reader<arm>(p, len, info.path, info.options, fOptions.readerOptions(), fNextInputOrdinal), info, len);
 			else if ( archive::Reader<arm>::validFile(p, len) )
-				return this->addArchive(new typename archive::Reader<arm>::Reader(p, len, info.path, info.modTime, fOptions.readerOptions(), fNextInputOrdinal), info, len);
+				return this->addArchive(new archive::Reader<arm>(p, len, info.path, info.modTime, fOptions.readerOptions(), fNextInputOrdinal), info, len);
 			break;
 			break;
 	}
@@ -3506,8 +3505,8 @@ bool Linker::SymbolTable::add(ObjectFile::Atom& newAtom)
 				if ( newAtom.getSize() > existingAtom->getSize() ) {
 					warning("for symbol %s tentative definition of size %llu from %s is "
 									"is smaller than the real definition of size %llu from %s",
-									newAtom.getDisplayName(), (unsigned long long)newAtom.getSize(), newAtom.getFile()->getPath(),
-									(unsigned long long)existingAtom->getSize(), existingAtom->getFile()->getPath());
+									newAtom.getDisplayName(), newAtom.getSize(), newAtom.getFile()->getPath(),
+									existingAtom->getSize(), existingAtom->getFile()->getPath());
 				}
 				break;
 			case kRegAndExtern:
@@ -3550,8 +3549,8 @@ bool Linker::SymbolTable::add(ObjectFile::Atom& newAtom)
 				if ( newAtom.getSize() < existingAtom->getSize() ) {
 					warning("for symbol %s tentative definition of size %llu from %s is "
 									"being replaced by a real definition of size %llu from %s",
-									newAtom.getDisplayName(), (unsigned long long)existingAtom->getSize(), existingAtom->getFile()->getPath(),
-									(unsigned long long)newAtom.getSize(), newAtom.getFile()->getPath());
+									newAtom.getDisplayName(), existingAtom->getSize(), existingAtom->getFile()->getPath(),
+									newAtom.getSize(), newAtom.getFile()->getPath());
 				}
 				break;
 			case kTentAndWeak:

@@ -39,7 +39,7 @@
 #include <algorithm>
 #include <map>
 #include <set>
-#include <tr1/unordered_map>
+#include <ext/hash_map>
 
 #include "ObjectFile.h"
 #include "ExecutableFile.h"
@@ -957,7 +957,7 @@ private:
 	using WriterAtom<A>::fWriter;
 	typedef typename A::P					P;
 	enum { kBufferSize = 0x01000000 };
-	typedef std::tr1::unordered_map<const char*, int32_t, std::tr1::hash<const char*>, CStringEquals> StringToOffset;
+	typedef __gnu_cxx::hash_map<const char*, int32_t, __gnu_cxx::hash<const char*>, CStringEquals> StringToOffset;
 
 	std::vector<char*>						fFullBuffers;
 	char*									fCurrentBuffer;
@@ -4088,7 +4088,7 @@ void Writer<x86>::addCrossSegmentRef(const ObjectFile::Atom* atom, const ObjectF
 			}
 			// fall into warning case
 		default:
-			warning("codegen in %s (offset 0x%08llX) prevents image from loading in dyld shared cache", atom->getDisplayName(), (unsigned long long)ref->getFixUpOffset());
+			warning("codegen in %s (offset 0x%08llX) prevents image from loading in dyld shared cache", atom->getDisplayName(), ref->getFixUpOffset());
 			fSplitCodeToDataContentAtom->setCantEncode();
 	}
 }
@@ -4342,7 +4342,7 @@ void Writer<A>::writeMap()
 				for (std::vector<SectionInfo*>::iterator secit = sectionInfos.begin(); secit != sectionInfos.end(); ++secit) {
 					if ( ! (*secit)->fVirtualSection ) {
 						SectionInfo* sect = *secit;
-						fprintf(mapFile, "0x%08llX\t0x%08llX\t%s\t%s\n", (unsigned long long)sect->getBaseAddress(), (unsigned long long)sect->fSize, 
+						fprintf(mapFile, "0x%08llX\t0x%08llX\t%s\t%s\n", sect->getBaseAddress(), sect->fSize, 
 							(*segit)->fName, sect->fSectionName);
 					}
 				}
@@ -4358,7 +4358,7 @@ void Writer<A>::writeMap()
 						bool isCstring = (strcmp((*secit)->fSectionName, "__cstring") == 0);
 						for (std::vector<ObjectFile::Atom*>::iterator ait = sectionAtoms.begin(); ait != sectionAtoms.end(); ++ait) {
 							ObjectFile::Atom* atom = *ait;
-							fprintf(mapFile, "0x%08llX\t0x%08llX\t[%3u] %s\n", (unsigned long long)atom->getAddress(), (unsigned long long)atom->getSize(), 
+							fprintf(mapFile, "0x%08llX\t0x%08llX\t[%3u] %s\n", atom->getAddress(), atom->getSize(), 
 								readerToFileOrdinal[atom->getFile()], isCstring ? stringName(atom->getDisplayName()): atom->getDisplayName());
 						}
 					}
@@ -4464,12 +4464,12 @@ uint64_t Writer<A>::writeAtoms()
 							if ( streaming ) {
 								if ( atomSize > fLargestAtomSize ) 
 									throwf("ld64 internal error: atom \"%s\"is larger than expected 0x%X > 0x%llX", 
-												atom->getDisplayName(), atomSize, (unsigned long long)fLargestAtomSize);
+												atom->getDisplayName(), atomSize, fLargestAtomSize);
 							}
 							else {
 								if ( fileOffset > fileBufferSize )
 									throwf("ld64 internal error: atom \"%s\" has file offset greater thatn expceted 0x%X > 0x%llX", 
-												atom->getDisplayName(), fileOffset, (unsigned long long)fileBufferSize);
+												atom->getDisplayName(), fileOffset, fileBufferSize);
 							}
 							uint8_t* buffer = streaming ? atomBuffer : &wholeBuffer[fileOffset];
 							end = fileOffset+atomSize;
@@ -5318,7 +5318,7 @@ void Writer<x86_64>::fixUpReferenceFinal(const ObjectFile::Reference* ref, const
 			if ( ref->getKind() == x86_64::kBranchPCRel8 ) {
 				if ( (displacement > 127) || (displacement < (-128)) ) {
 					fprintf(stderr, "branch out of range from %s (%llX) in %s to %s (%llX) in %s\n", 
-						inAtom->getDisplayName(), (unsigned long long)inAtom->getAddress(), inAtom->getFile()->getPath(), ref->getTarget().getDisplayName(), (unsigned long long)ref->getTarget().getAddress(), ref->getTarget().getFile()->getPath());
+						inAtom->getDisplayName(), inAtom->getAddress(), inAtom->getFile()->getPath(), ref->getTarget().getDisplayName(), ref->getTarget().getAddress(), ref->getTarget().getFile()->getPath());
 					throw "rel8 out of range";
 				}
 				*((int8_t*)fixUp) = (int8_t)displacement;
@@ -5326,7 +5326,7 @@ void Writer<x86_64>::fixUpReferenceFinal(const ObjectFile::Reference* ref, const
 			else {
 				if ( (displacement > twoGigLimit) || (displacement < (-twoGigLimit)) ) {
 					fprintf(stderr, "call out of range from %s (%llX) in %s to %s (%llX) in %s\n", 
-						inAtom->getDisplayName(), (unsigned long long)inAtom->getAddress(), inAtom->getFile()->getPath(), ref->getTarget().getDisplayName(), (unsigned long long)ref->getTarget().getAddress(), ref->getTarget().getFile()->getPath());
+						inAtom->getDisplayName(), inAtom->getAddress(), inAtom->getFile()->getPath(), ref->getTarget().getDisplayName(), ref->getTarget().getAddress(), ref->getTarget().getFile()->getPath());
 					throw "rel32 out of range";
 				}
 				LittleEndian::set32(*((uint32_t*)fixUp), (int32_t)displacement);
@@ -5629,8 +5629,8 @@ void Writer<A>::fixUpReference_powerpc(const ObjectFile::Reference* ref, const O
 					if ( (displacement > bl_eightMegLimit) || (displacement < (-bl_eightMegLimit)) ) {
 						//fprintf(stderr, "bl out of range (%lld max is +/-16M) from %s in %s to %s in %s\n", displacement, this->getDisplayName(), this->getFile()->getPath(), target.getDisplayName(), target.getFile()->getPath());
 						throwf("bl out of range (%lld max is +/-16M) from %s at 0x%08llX in %s of %s to %s at 0x%08llX in %s of  %s",
-							(unsigned long long)displacement, inAtom->getDisplayName(), (unsigned long long)inAtom->getAddress(), inAtom->getSectionName(), inAtom->getFile()->getPath(),
-							ref->getTarget().getDisplayName(), (unsigned long long)ref->getTarget().getAddress(), ref->getTarget().getSectionName(), ref->getTarget().getFile()->getPath());
+							displacement, inAtom->getDisplayName(), inAtom->getAddress(), inAtom->getSectionName(), inAtom->getFile()->getPath(),
+							ref->getTarget().getDisplayName(), ref->getTarget().getAddress(), ref->getTarget().getSectionName(), ref->getTarget().getFile()->getPath());
 					}
 				}
 				instruction = BigEndian::get32(*fixUp);
@@ -6766,13 +6766,13 @@ bool Writer<A>::addPPCBranchIslands()
 	bool result = false;
 	// Can only possibly need branch islands if __TEXT segment > 16M
 	if ( fLoadCommandsSegment->fSize > 16000000 ) {
-		if ( log) fprintf(stderr, "ld: checking for branch islands, __TEXT segment size=%llu\n", (unsigned long long)fLoadCommandsSegment->fSize);
+		if ( log) fprintf(stderr, "ld: checking for branch islands, __TEXT segment size=%llu\n", fLoadCommandsSegment->fSize);
 		const uint32_t kBetweenRegions = 15*1024*1024; // place regions of islands every 15MB in __text section
 		SectionInfo* textSection = NULL;
 		for (std::vector<SectionInfo*>::iterator it=fLoadCommandsSegment->fSections.begin(); it != fLoadCommandsSegment->fSections.end(); it++) {
 			if ( strcmp((*it)->fSectionName, "__text") == 0 ) {
 				textSection = *it;
-				if ( log) fprintf(stderr, "ld: checking for branch islands, __text section size=%llu\n", (unsigned long long)textSection->fSize);
+				if ( log) fprintf(stderr, "ld: checking for branch islands, __text section size=%llu\n", textSection->fSize);
 				break;
 			}
 		}
@@ -6794,7 +6794,7 @@ bool Writer<A>::addPPCBranchIslands()
 					int64_t srcAddr = atom->getAddress() + ref->getFixUpOffset();
 					int64_t dstAddr = target.getAddress() + ref->getTargetOffset();
 					int64_t displacement = dstAddr - srcAddr;
-					TargetAndOffset finalTargetAndOffset = { &target, (uint32_t)ref->getTargetOffset() };
+					TargetAndOffset finalTargetAndOffset = { &target, ref->getTargetOffset() };
 					const int64_t kFifteenMegLimit = kBetweenRegions;
 					if ( displacement > kFifteenMegLimit ) {
 						// create forward branch chain
@@ -7122,16 +7122,16 @@ void Writer<A>::assignFileOffsets()
 					if ( segment1->fBaseAddress < segment2->fBaseAddress ) {
 						if ( (segment1->fBaseAddress+segment1->fSize) > segment2->fBaseAddress )
 							throwf("segments overlap: %s (0x%08llX + 0x%08llX) and %s (0x%08llX + 0x%08llX)",
-								segment1->fName, (unsigned long long)segment1->fBaseAddress, (unsigned long long)segment1->fSize, segment2->fName, (unsigned long long)segment2->fBaseAddress, (unsigned long long)segment2->fSize);
+								segment1->fName, segment1->fBaseAddress, segment1->fSize, segment2->fName, segment2->fBaseAddress, segment2->fSize);
 					}
 					else if ( segment1->fBaseAddress > segment2->fBaseAddress ) {
 						if ( (segment2->fBaseAddress+segment2->fSize) > segment1->fBaseAddress )
 							throwf("segments overlap: %s (0x%08llX + 0x%08llX) and %s (0x%08llX + 0x%08llX)",
-								segment1->fName, (unsigned long long)segment1->fBaseAddress, (unsigned long long)segment1->fSize, segment2->fName, (unsigned long long)segment2->fBaseAddress, (unsigned long long)segment2->fSize);
+								segment1->fName, segment1->fBaseAddress, segment1->fSize, segment2->fName, segment2->fBaseAddress, segment2->fSize);
 					}
 					else if ( (segment1->fSize != 0) && (segment2->fSize != 0) ) {
 							throwf("segments overlap: %s (0x%08llX + 0x%08llX) and %s (0x%08llX + 0x%08llX)",
-								segment1->fName, (unsigned long long)segment1->fBaseAddress, (unsigned long long)segment1->fSize, segment2->fName, (unsigned long long)segment2->fBaseAddress, (unsigned long long)segment2->fSize);
+								segment1->fName, segment1->fBaseAddress, segment1->fSize, segment2->fName, segment2->fBaseAddress, segment2->fSize);
 					}
 				}
 			}

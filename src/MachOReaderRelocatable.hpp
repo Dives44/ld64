@@ -60,6 +60,25 @@ extern void warning(const char* format, ...);
 namespace mach_o {
 namespace relocatable {
 
+class BaseAtom : public ObjectFile::Atom
+{
+public:
+												BaseAtom() : fStabsStartIndex(0), fStabsCount(0) {}
+
+	virtual void								setSize(uint64_t size)	= 0;
+	virtual void								addReference(ObjectFile::Reference* ref) = 0;
+	virtual void								sortReferences() = 0;
+	virtual void								addLineInfo(const ObjectFile::LineInfo& info) = 0;
+	virtual uint64_t							getObjectAddress() const = 0;
+	virtual uint32_t							getOrdinal() const { return fOrdinal; }
+	virtual void								setOrdinal(uint32_t value) { fOrdinal = value; }
+	virtual const void*							getSectionRecord() const = 0;
+	virtual bool								isAlias() const { return false; }
+
+	uint32_t									fStabsStartIndex;
+	uint32_t									fStabsCount;
+	uint32_t									fOrdinal;
+};
 
 
 class ReferenceSorter
@@ -83,25 +102,6 @@ struct AtomAndOffset
 	uint32_t			offset;
 };
 
-class BaseAtom : public ObjectFile::Atom
-{
-public:
-												BaseAtom() : fStabsStartIndex(0), fStabsCount(0) {}
-
-	virtual void								setSize(uint64_t size)	= 0;
-	virtual void								addReference(ObjectFile::Reference* ref) = 0;
-	virtual void								sortReferences() = 0;
-	virtual void								addLineInfo(const ObjectFile::LineInfo& info) = 0;
-	virtual uint64_t							getObjectAddress() const = 0;
-	virtual uint32_t							getOrdinal() const { return fOrdinal; }
-	virtual void								setOrdinal(uint32_t value) { fOrdinal = value; }
-	virtual const void*							getSectionRecord() const = 0;
-	virtual bool								isAlias() const { return false; }
-
-	uint32_t									fStabsStartIndex;
-	uint32_t									fStabsCount;
-	uint32_t									fOrdinal;
-};
 
 template <typename A>
 class Reference : public ObjectFile::Reference
@@ -286,7 +286,6 @@ public:
 };
 
 LinkEditSegment LinkEditSegment::fgSingleton;
-
 class BaseAtomSorter
 {
 public:
@@ -879,7 +878,7 @@ AnonymousAtom<A>::AnonymousAtom(Reader<A>& owner, const macho_section<P>* sectio
 	switch ( type ) {
 		case S_ZEROFILL:
 			{
-				asprintf((char**)&fSynthesizedName, "zero-fill-at-0x%08X", (unsigned int)addr);
+				asprintf((char**)&fSynthesizedName, "zero-fill-at-0x%08X", addr);
 			}
 			break;
 		case S_COALESCED:
@@ -932,7 +931,7 @@ AnonymousAtom<A>::AnonymousAtom(Reader<A>& owner, const macho_section<P>* sectio
 		case S_8BYTE_LITERALS:
 			{
 				uint64_t value =  E::get64(*(uint64_t*)(((uint8_t*)owner.fHeader) + section->offset() + addr - section->addr()));
-				asprintf((char**)&fSynthesizedName, "8-byte-literal=0x%016llX", (unsigned long long)value);
+				asprintf((char**)&fSynthesizedName, "8-byte-literal=0x%016llX", value);
 				fScope = ObjectFile::Atom::scopeLinkageUnit;
 				fKind = ObjectFile::Atom::kWeakDefinition;
 				fDontDeadStrip = false;
@@ -942,7 +941,7 @@ AnonymousAtom<A>::AnonymousAtom(Reader<A>& owner, const macho_section<P>* sectio
 			{
 				uint64_t value1 =  E::get64(*(uint64_t*)(((uint8_t*)owner.fHeader) + section->offset() + addr - section->addr()));
 				uint64_t value2 =  E::get64(*(uint64_t*)(((uint8_t*)owner.fHeader) + section->offset() + addr + 8 - section->addr()));
-				asprintf((char**)&fSynthesizedName, "16-byte-literal=0x%016llX,%016llX", (unsigned long long)value1, (unsigned long long)value2);
+				asprintf((char**)&fSynthesizedName, "16-byte-literal=0x%016llX,%016llX", value1, value2);
 				fScope = ObjectFile::Atom::scopeLinkageUnit;
 				fKind = ObjectFile::Atom::kWeakDefinition;
 				fDontDeadStrip = false;
@@ -962,10 +961,10 @@ AnonymousAtom<A>::AnonymousAtom(Reader<A>& owner, const macho_section<P>* sectio
 			}
 			break;
 		case S_MOD_INIT_FUNC_POINTERS:
-			asprintf((char**)&fSynthesizedName, "initializer$%d", (int)((addr - (uint32_t)fSection->addr())/sizeof(pint_t)));
+				asprintf((char**)&fSynthesizedName, "initializer$%d", (addr - (uint32_t)fSection->addr())/sizeof(pint_t));
 				break;
 		case S_MOD_TERM_FUNC_POINTERS:
-			asprintf((char**)&fSynthesizedName, "terminator$%d", (int)((addr - (uint32_t)fSection->addr())/sizeof(pint_t)));
+				asprintf((char**)&fSynthesizedName, "terminator$%d", (addr - (uint32_t)fSection->addr())/sizeof(pint_t));
 				break;
 		case S_SYMBOL_STUBS:
 			{
@@ -1031,7 +1030,7 @@ AnonymousAtom<A>::AnonymousAtom(Reader<A>& owner, const macho_section<P>* sectio
 					if ( closestSym != NULL ) {
 						const char* name = &fOwner.fStrings[closestSym->n_strx()];
 						char* str;
-						asprintf(&str, "%s+%u$non_lazy_ptr", name, (unsigned int)(nonLazyPtrValue - closestSym->n_value()));
+						asprintf(&str, "%s+%u$non_lazy_ptr", name, nonLazyPtrValue - closestSym->n_value());
 						fSynthesizedName = str;
 					}
 					else {
@@ -1163,7 +1162,7 @@ const char* AnonymousAtom<A>::getDisplayName() const
 		asprintf((char**)&fDisplayName, "atom string literal: \"%s\"", (char*)(fOwner.fHeader)+fileOffset);
 	}
 	else {
-		asprintf((char**)&fDisplayName, "%s@%d", fSection->sectname(), (int)(fAddress - (uint32_t)fSection->addr()) );
+		asprintf((char**)&fDisplayName, "%s@%d", fSection->sectname(), fAddress - (uint32_t)fSection->addr() );
 	}
 	return fDisplayName;
 }
@@ -2067,7 +2066,7 @@ Reader<A>::Reader(const uint8_t* fileContent, const char* path, time_t modTime, 
 								}
 								else {
 									fprintf(stderr, "can't find atom for stabs BNSYM at %08llX in %s",
-										(unsigned long long)sym->n_value(), path);
+										(uint64_t)sym->n_value(), path);
 								}
 								break;
 							case N_SO:
@@ -4313,10 +4312,10 @@ const char* Reference<ppc64>::getDescription() const
 			sprintf(temp, "group subordinate ");
 			break;
 		case ppc64::kPointerWeakImport:
-			sprintf(temp, "offset 0x%04llX, weak import pointer to ", (unsigned long long)fFixUpOffsetInSrc);
+			sprintf(temp, "offset 0x%04llX, weak import pointer to ", fFixUpOffsetInSrc);
 			break;
 		case ppc64::kPointer:
-			sprintf(temp, "offset 0x%04llX, pointer to ", (unsigned long long)fFixUpOffsetInSrc);
+			sprintf(temp, "offset 0x%04llX, pointer to ", fFixUpOffsetInSrc);
 			break;
 		case ppc64::kPointerDiff64:
 			{
@@ -4324,7 +4323,7 @@ const char* Reference<ppc64>::getDescription() const
 			const char* targetQuotes = (&(this->getTarget()) == NULL) ? "\"" : "";
 			const char* fromQuotes = (&(this->getFromTarget()) == NULL) ? "\"" : "";
 			sprintf(temp, "offset 0x%04llX, 64-bit pointer difference: (&%s%s%s + %u) - (&%s%s%s + %u)",
-					(unsigned long long)fFixUpOffsetInSrc, targetQuotes, this->getTargetName(), targetQuotes, fToTarget.offset,
+				fFixUpOffsetInSrc, targetQuotes, this->getTargetName(), targetQuotes, fToTarget.offset,
 							   fromQuotes, this->getFromTargetName(), fromQuotes, fFromTarget.offset );
 			return temp;
 			}
@@ -4334,7 +4333,7 @@ const char* Reference<ppc64>::getDescription() const
 			const char* targetQuotes = (&(this->getTarget()) == NULL) ? "\"" : "";
 			const char* fromQuotes = (&(this->getFromTarget()) == NULL) ? "\"" : "";
 			sprintf(temp, "offset 0x%04llX, 32-bit pointer difference: (&%s%s%s + %u) - (&%s%s%s + %u)",
-					(unsigned long long)fFixUpOffsetInSrc, targetQuotes, this->getTargetName(), targetQuotes, fToTarget.offset,
+				fFixUpOffsetInSrc, targetQuotes, this->getTargetName(), targetQuotes, fToTarget.offset,
 							   fromQuotes, this->getFromTargetName(), fromQuotes, fFromTarget.offset );
 			return temp;
 			}
@@ -4344,49 +4343,49 @@ const char* Reference<ppc64>::getDescription() const
 			const char* targetQuotes = (&(this->getTarget()) == NULL) ? "\"" : "";
 			const char* fromQuotes = (&(this->getFromTarget()) == NULL) ? "\"" : "";
 			sprintf(temp, "offset 0x%04llX, 16-bit pointer difference: (&%s%s%s + %u) - (&%s%s%s + %u)",
-					(unsigned long long)fFixUpOffsetInSrc, targetQuotes, this->getTargetName(), targetQuotes, fToTarget.offset,
+				fFixUpOffsetInSrc, targetQuotes, this->getTargetName(), targetQuotes, fToTarget.offset,
 							   fromQuotes, this->getFromTargetName(), fromQuotes, fFromTarget.offset );
 			return temp;
 			}
 		case ppc64::kBranch24WeakImport:
-			sprintf(temp, "offset 0x%04llX, pc-rel branch fixup to weak imported ", (unsigned long long)fFixUpOffsetInSrc);
+			sprintf(temp, "offset 0x%04llX, pc-rel branch fixup to weak imported ", fFixUpOffsetInSrc);
 			break;
 		case ppc64::kBranch24:
 		case ppc64::kBranch14:
-			sprintf(temp, "offset 0x%04llX, pc-rel branch fixup to ", (unsigned long long)fFixUpOffsetInSrc);
+			sprintf(temp, "offset 0x%04llX, pc-rel branch fixup to ", fFixUpOffsetInSrc);
 			break;
 		case ppc64::kPICBaseLow16:
-			sprintf(temp, "offset 0x%04llX, low  16 fixup from pic-base offset 0x%04X to ", (unsigned long long)fFixUpOffsetInSrc, fFromTarget.offset);
+			sprintf(temp, "offset 0x%04llX, low  16 fixup from pic-base offset 0x%04X to ", fFixUpOffsetInSrc, fFromTarget.offset);
 			break;
 		case ppc64::kPICBaseLow14:
-			sprintf(temp, "offset 0x%04llX, low  14 fixup from pic-base offset 0x%04X to ", (unsigned long long)fFixUpOffsetInSrc, fFromTarget.offset);
+			sprintf(temp, "offset 0x%04llX, low  14 fixup from pic-base offset 0x%04X to ", fFixUpOffsetInSrc, fFromTarget.offset);
 			break;
 		case ppc64::kPICBaseHigh16:
-			sprintf(temp, "offset 0x%04llX, high 16 fixup from pic-base offset 0x%04X to ", (unsigned long long)fFixUpOffsetInSrc, fFromTarget.offset);
+			sprintf(temp, "offset 0x%04llX, high 16 fixup from pic-base offset 0x%04X to ", fFixUpOffsetInSrc, fFromTarget.offset);
 			break;
 		case ppc64::kAbsLow16:
-			sprintf(temp, "offset 0x%04llX, low  16 fixup to absolute address of ", (unsigned long long)fFixUpOffsetInSrc);
+			sprintf(temp, "offset 0x%04llX, low  16 fixup to absolute address of ", fFixUpOffsetInSrc);
 			break;
 		case ppc64::kAbsLow14:
-			sprintf(temp, "offset 0x%04llX, low  14 fixup to absolute address of ", (unsigned long long)fFixUpOffsetInSrc);
+			sprintf(temp, "offset 0x%04llX, low  14 fixup to absolute address of ", fFixUpOffsetInSrc);
 			break;
 		case ppc64::kAbsHigh16:
-			sprintf(temp, "offset 0x%04llX, high 16 fixup or to absolute address of ", (unsigned long long)fFixUpOffsetInSrc);
+			sprintf(temp, "offset 0x%04llX, high 16 fixup or to absolute address of ", fFixUpOffsetInSrc);
 			break;
 		case ppc64::kAbsHigh16AddLow:
-			sprintf(temp, "offset 0x%04llX, high 16 fixup add to absolute address of ", (unsigned long long)fFixUpOffsetInSrc);
+			sprintf(temp, "offset 0x%04llX, high 16 fixup add to absolute address of ", fFixUpOffsetInSrc);
 			break;
 		case ppc64::kDtraceProbe:
-			sprintf(temp, "offset 0x%04llX, dtrace static probe ", (unsigned long long)fFixUpOffsetInSrc);
+			sprintf(temp, "offset 0x%04llX, dtrace static probe ", fFixUpOffsetInSrc);
 			break;
 		case ppc64::kDtraceProbeSite:
-			sprintf(temp, "offset 0x%04llX, dtrace static probe site", (unsigned long long)fFixUpOffsetInSrc);
+			sprintf(temp, "offset 0x%04llX, dtrace static probe site", fFixUpOffsetInSrc);
 			break;
 		case ppc64::kDtraceIsEnabledSite:
-			sprintf(temp, "offset 0x%04llX, dtrace static probe is-enabled site", (unsigned long long)fFixUpOffsetInSrc);
+			sprintf(temp, "offset 0x%04llX, dtrace static probe is-enabled site", fFixUpOffsetInSrc);
 			break;
 		case ppc64::kDtraceTypeReference:
-			sprintf(temp, "offset 0x%04llX, dtrace type/stability reference", (unsigned long long)fFixUpOffsetInSrc);
+			sprintf(temp, "offset 0x%04llX, dtrace type/stability reference", fFixUpOffsetInSrc);
 			break;
 	}
 	// always quote by-name references
@@ -4402,7 +4401,7 @@ const char* Reference<ppc64>::getDescription() const
 		strcat(temp, "NULL target");
 	}
 	if ( fToTarget.offset != 0 )
-		sprintf(&temp[strlen(temp)], " plus 0x%llX", (unsigned long long)this->getTargetOffset());
+		sprintf(&temp[strlen(temp)], " plus 0x%llX", this->getTargetOffset());
 
 	return temp;
 }
@@ -4423,10 +4422,10 @@ const char* Reference<x86_64>::getDescription() const
 			sprintf(temp, "group subordinate ");
 			break;
 		case x86_64::kPointerWeakImport:
-			sprintf(temp, "offset 0x%04llX, weak import pointer to ", (unsigned long long)fFixUpOffsetInSrc);
+			sprintf(temp, "offset 0x%04llX, weak import pointer to ", fFixUpOffsetInSrc);
 			break;
 		case x86_64::kPointer:
-			sprintf(temp, "offset 0x%04llX, pointer to ", (unsigned long long)fFixUpOffsetInSrc);
+			sprintf(temp, "offset 0x%04llX, pointer to ", fFixUpOffsetInSrc);
 			break;
 		case x86_64::kPointerDiff32:
 		case x86_64::kPointerDiff:
@@ -4436,55 +4435,55 @@ const char* Reference<x86_64>::getDescription() const
 			const char* fromQuotes = (&(this->getFromTarget()) == NULL) ? "\"" : "";
 			const char* size = (fKind == x86_64::kPointerDiff32) ? "32-bit" : "64-bit";
 			sprintf(temp, "offset 0x%04llX, %s pointer difference: (&%s%s%s + 0x%08X) - (&%s%s%s + 0x%08X)",
-				(unsigned long long)fFixUpOffsetInSrc, size, targetQuotes, this->getTargetName(), targetQuotes, fToTarget.offset,
+				fFixUpOffsetInSrc, size, targetQuotes, this->getTargetName(), targetQuotes, fToTarget.offset,
 							   fromQuotes, this->getFromTargetName(), fromQuotes, fFromTarget.offset );
 			return temp;
 			}
 			break;
 		case x86_64::kPCRel32:
-			sprintf(temp, "offset 0x%04llX, rel32 reference to ", (unsigned long long)fFixUpOffsetInSrc);
+			sprintf(temp, "offset 0x%04llX, rel32 reference to ", fFixUpOffsetInSrc);
 			break;
 		case x86_64::kPCRel32_1:
-			sprintf(temp, "offset 0x%04llX, rel32-1 reference to ", (unsigned long long)fFixUpOffsetInSrc);
+			sprintf(temp, "offset 0x%04llX, rel32-1 reference to ", fFixUpOffsetInSrc);
 			break;
 		case x86_64::kPCRel32_2:
-			sprintf(temp, "offset 0x%04llX, rel32-2 reference to ", (unsigned long long)fFixUpOffsetInSrc);
+			sprintf(temp, "offset 0x%04llX, rel32-2 reference to ", fFixUpOffsetInSrc);
 			break;
 		case x86_64::kPCRel32_4:
-			sprintf(temp, "offset 0x%04llX, rel32-4 reference to ", (unsigned long long)fFixUpOffsetInSrc);
+			sprintf(temp, "offset 0x%04llX, rel32-4 reference to ", fFixUpOffsetInSrc);
 			break;
 		case x86_64::kBranchPCRel32:
-			sprintf(temp, "offset 0x%04llX, branch rel32 reference to ", (unsigned long long)fFixUpOffsetInSrc);
+			sprintf(temp, "offset 0x%04llX, branch rel32 reference to ", fFixUpOffsetInSrc);
 			break;
 		case x86_64::kBranchPCRel32WeakImport:
-			sprintf(temp, "offset 0x%04llX, branch rel32 reference to weak imported ", (unsigned long long)fFixUpOffsetInSrc);
+			sprintf(temp, "offset 0x%04llX, branch rel32 reference to weak imported ", fFixUpOffsetInSrc);
 			break;
 		case x86_64::kPCRel32GOT:
-			sprintf(temp, "offset 0x%04llX, rel32 reference to GOT entry for ", (unsigned long long)fFixUpOffsetInSrc);
+			sprintf(temp, "offset 0x%04llX, rel32 reference to GOT entry for ", fFixUpOffsetInSrc);
 			break;
 		case x86_64::kPCRel32GOTWeakImport:
-			sprintf(temp, "offset 0x%04llX, rel32 reference to GOT entry for weak imported ", (unsigned long long)fFixUpOffsetInSrc);
+			sprintf(temp, "offset 0x%04llX, rel32 reference to GOT entry for weak imported ", fFixUpOffsetInSrc);
 			break;
 		case x86_64::kPCRel32GOTLoad:
-			sprintf(temp, "offset 0x%04llX, rel32 reference to GOT entry for ", (unsigned long long)fFixUpOffsetInSrc);
+			sprintf(temp, "offset 0x%04llX, rel32 reference to GOT entry for ", fFixUpOffsetInSrc);
 			break;
 		case x86_64::kPCRel32GOTLoadWeakImport:
-			sprintf(temp, "offset 0x%04llX, rel32 reference to GOT entry for weak imported ", (unsigned long long)fFixUpOffsetInSrc);
+			sprintf(temp, "offset 0x%04llX, rel32 reference to GOT entry for weak imported ", fFixUpOffsetInSrc);
 			break;
 		case x86_64::kBranchPCRel8:
-			sprintf(temp, "offset 0x%04llX, branch rel8 reference to ", (unsigned long long)fFixUpOffsetInSrc);
+			sprintf(temp, "offset 0x%04llX, branch rel8 reference to ", fFixUpOffsetInSrc);
 			break;
 		case x86_64::kDtraceProbe:
-			sprintf(temp, "offset 0x%04llX, dtrace static probe ", (unsigned long long)fFixUpOffsetInSrc);
+			sprintf(temp, "offset 0x%04llX, dtrace static probe ", fFixUpOffsetInSrc);
 			break;
 		case x86_64::kDtraceProbeSite:
-			sprintf(temp, "offset 0x%04llX, dtrace static probe site", (unsigned long long)fFixUpOffsetInSrc);
+			sprintf(temp, "offset 0x%04llX, dtrace static probe site", fFixUpOffsetInSrc);
 			break;
 		case x86_64::kDtraceIsEnabledSite:
-			sprintf(temp, "offset 0x%04llX, dtrace static probe is-enabled site", (unsigned long long)fFixUpOffsetInSrc);
+			sprintf(temp, "offset 0x%04llX, dtrace static probe is-enabled site", fFixUpOffsetInSrc);
 			break;
 		case x86_64::kDtraceTypeReference:
-			sprintf(temp, "offset 0x%04llX, dtrace type/stability reference", (unsigned long long)fFixUpOffsetInSrc);
+			sprintf(temp, "offset 0x%04llX, dtrace type/stability reference", fFixUpOffsetInSrc);
 			break;
 	}
 	// always quote by-name references
@@ -4500,7 +4499,7 @@ const char* Reference<x86_64>::getDescription() const
 		strcat(temp, "NULL target");
 	}
 	if ( fToTarget.offset != 0 )
-		sprintf(&temp[strlen(temp)], " plus 0x%llX", (unsigned long long)this->getTargetOffset());
+		sprintf(&temp[strlen(temp)], " plus 0x%llX", this->getTargetOffset());
 
 	return temp;
 }
