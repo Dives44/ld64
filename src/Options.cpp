@@ -22,7 +22,7 @@
  * @APPLE_LICENSE_HEADER_END@
  */
 
-
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <mach/vm_prot.h>
@@ -1514,7 +1514,7 @@ void Options::addSection(const char* segment, const char* section, const char* p
 	::close(fd);
 
 	// record section to create
-	ExtraSection info = { segment, section, path, (uint8_t*)p, (uint64_t)stat_buf.st_size };
+	ExtraSection info = { segment, section, path, (uint8_t*)p, stat_buf.st_size };
 	fExtraSections.push_back(info);
 }
 
@@ -3081,6 +3081,8 @@ void Options::checkForClassic(int argc, const char* argv[])
 	bool archFound = false;
 	bool staticFound = false;
 	bool dtraceFound = false;
+	bool rFound = false;
+	bool creatingMachKernel = false;
 	bool newLinker = false;
 
 	for(int i=0; i < argc; ++i) {
@@ -3097,6 +3099,7 @@ void Options::checkForClassic(int argc, const char* argv[])
 				dtraceFound = true;
 			}
 			else if ( strcmp(arg, "-r") == 0 ) {
+				rFound = true;
 			}
 			else if ( strcmp(arg, "-new_linker") == 0 ) {
 				newLinker = true;
@@ -3109,7 +3112,8 @@ void Options::checkForClassic(int argc, const char* argv[])
 			}
 			else if ( strcmp(arg, "-o") == 0 ) {
 				const char* outfile = argv[++i];
-				if ( (outfile != NULL) && (strstr(outfile, "/mach_kernel") != NULL) ) {}
+				if ( (outfile != NULL) && (strstr(outfile, "/mach_kernel") != NULL) )
+					creatingMachKernel = true;
 			}
 		}
 	}
