@@ -405,7 +405,7 @@ void Reader<A>::buildHashTable()
 	// this assures that with duplicates those earliest in the list will be found
 	for (int i = fTableOfContentCount-1; i >= 0; --i) {
 		const struct ranlib* entry = &fTableOfContents[i];
-		const char* entryName = &fStringPool[E::get32(entry->ran_un.ran_strx)];
+		const char* entryName = &fStringPool[E::get32(entry->ran_strx)];
 		const Entry* member = (Entry*)&fFileContent[E::get32(entry->ran_off)];
 		//fprintf(stderr, "adding hash %d, %s -> %p\n", i, entryName, entry);
 		fHashTable[entryName] = entry;
@@ -418,7 +418,7 @@ void Reader<A>::dumpTableOfContents()
 {
 	for (unsigned int i=0; i < fTableOfContentCount; ++i) {
 		const struct ranlib* e = &fTableOfContents[i];
-		printf("%s in %s\n", &fStringPool[E::get32(e->ran_un.ran_strx)], ((Entry*)&fFileContent[E::get32(e->ran_off)])->getName());
+		printf("%s in %s\n", &fStringPool[E::get32(e->ran_strx)], ((Entry*)&fFileContent[E::get32(e->ran_off)])->getName());
 	}
 }
 

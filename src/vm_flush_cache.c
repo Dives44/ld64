@@ -82,7 +82,7 @@ vm_size_t size)
 	asm("trap #2");
 	return(KERN_SUCCESS);
 #endif
-#if 1
+#ifdef __i386__
 	asm("jmp 1f");
 	asm("1: nop");
 	return(KERN_SUCCESS);
