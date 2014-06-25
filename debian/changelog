@@ -1,3 +1,9 @@
+ld64 (85.2.3-1) saucy; urgency=low
+
+  * Following upstream version 85.2.3-1
+
+ -- Fabian Renn <fabian.renn@gmail.com>  Wed, 25 Jun 2014 14:23:15 +0100
+
 ld64 (85.2.2-1) saucy; urgency=low
 
   * New upstream version
