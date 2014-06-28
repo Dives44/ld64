@@ -1,3 +1,9 @@
+ld64 (85.2.4-2) trusty; urgency=low
+
+  * Upgrade to trusty
+
+ -- Fabian Renn <fabian.renn@gmail.com>  Sat, 28 Jun 2014 12:12:25 +0100
+
 ld64 (85.2.4-1) saucy; urgency=low
 
   * Following upstream version 85.2.4
