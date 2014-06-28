@@ -35,7 +35,6 @@
 #include <set>
 #include <algorithm>
 #include <ext/hash_map>
-#include <ext/hash_set>
 
 #include "MachOFileAbstraction.hpp"
 #include "ObjectFile.h"
