@@ -96,7 +96,7 @@ private:
 	const macho_header<P>*						fHeader;
 	pint_t										fOrignalVMRelocBaseAddress;
 	pint_t										fSlide;
-	pint_t										fRelocBase;
+	//	pint_t										fRelocBase;
 	std::vector<vmmap>							fVMMApping;
 };
 
@@ -568,7 +568,7 @@ template <typename A>
 void Rebaser<A>::setRelocBase()
 {
 	// reloc addresses are from the start of the mapped file (base address)
-	fRelocBase = reinterpret_cast<uintptr_t>(fHeader);
+	//	fRelocBase = (pint_t)fHeader;
 	fOrignalVMRelocBaseAddress = this->getBaseAddress();
 	//fprintf(stderr, "fOrignalVMRelocBaseAddress=0x%08X\n", fOrignalVMRelocBaseAddress);
 }
@@ -588,7 +588,7 @@ void Rebaser<ppc64>::setRelocBase()
 			if ( segCmd->initprot() & VM_PROT_WRITE ) {
 				if ( (segCmd->vmaddr() + segCmd->vmsize() - this->getBaseAddress()) > 0x100000000ULL ) {
 					// found writable segment with address > 4GB past base address
-					fRelocBase = segCmd->fileoff() + (pint_t)fHeader;
+					//					fRelocBase = segCmd->fileoff() + (pint_t)fHeader;
 					fOrignalVMRelocBaseAddress = segCmd->vmaddr();
 					return;
 				}
@@ -597,7 +597,7 @@ void Rebaser<ppc64>::setRelocBase()
 		cmd = (const macho_load_command<P>*)(((uint8_t*)cmd)+cmd->cmdsize());
 	}
 	// just use base address
-	fRelocBase = (pint_t)fHeader;
+	//	fRelocBase = (pint_t)fHeader;
 	fOrignalVMRelocBaseAddress = this->getBaseAddress();
 }
 
@@ -612,7 +612,7 @@ void Rebaser<x86_64>::setRelocBase()
 		if ( cmd->cmd() == macho_segment_command<P>::CMD ) {
 			const macho_segment_command<P>* segCmd = (const macho_segment_command<P>*)cmd;
 			if ( segCmd->initprot() & VM_PROT_WRITE ) {
-				fRelocBase = segCmd->fileoff() + (pint_t)fHeader;
+				//				fRelocBase = segCmd->fileoff() + (pint_t)fHeader;
 				fOrignalVMRelocBaseAddress = segCmd->vmaddr();
 				return;
 			}

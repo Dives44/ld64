@@ -1,3 +1,4 @@
+
 /* -*- mode: C++; c-basic-offset: 4; tab-width: 4 -*-
  *
  * Copyright (c) 2005-2007 Apple Inc. All rights reserved.
@@ -27,6 +28,8 @@
 #define __OBJECTFILE__
 
 #include <stdint.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include <vector>
 #include <map>
 #include <set>
