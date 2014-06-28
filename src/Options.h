@@ -27,17 +27,11 @@
 
 
 #include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <limits.h>
-#include <ctype.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include <string.h>
 #include <mach/machine.h>
 
 #include <vector>
-#include <tr1/unordered_set>
+#include <ext/hash_set>
 
 #include "ObjectFile.h"
 
@@ -223,7 +217,7 @@ private:
 		bool operator()(const char* left, const char* right) const { return (strcmp(left, right) == 0); }
 	};
 
-	typedef std::tr1::unordered_set<const char*, std::tr1::hash<const char*>, CStringEquals>  NameSet;
+	typedef __gnu_cxx::hash_set<const char*, __gnu_cxx::hash<const char*>, CStringEquals>  NameSet;
 	enum ExportMode { kExportDefault, kExportSome, kDontExportSome };
 	enum LibrarySearchMode { kSearchDylibAndArchiveInEachDir, kSearchAllDirsForDylibsThenAllDirsForArchives };
 	enum InterposeMode { kInterposeNone, kInterposeAllExternal, kInterposeSome };
